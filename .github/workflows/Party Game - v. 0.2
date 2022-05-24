@@ -1,0 +1,326 @@
+// link para a montagem do circuito
+//https://wokwi.com/projects/332547318954852948
+
+#include <Adafruit_NeoPixel.h>
+#define pinMatrizLED 6
+#define ledVerm 3
+
+Adafruit_NeoPixel matrizLED = Adafruit_NeoPixel(60, pinMatrizLED, NEO_GRB + NEO_KHZ800);
+// Inicio Botão - código fornecido pelo Rogério
+class Botao
+{
+  int Down=false,Up=false,Pressed=false;
+  int buttonPin;
+
+
+  int buttonState;             
+  int lastButtonState = LOW;   
+
+
+  unsigned long lastDebounceTime = 0.0001;  
+  unsigned long debounceDelay = 0.0001;    
+
+  public:
+  void setupBot(int p);
+  int ButtonDown();
+  int ButtonUp();
+  int ButtonPressed();
+
+
+  private:
+  void leituraBotao() ;
+};
+
+
+void Botao::setupBot(int p) 
+{
+  buttonPin=p;
+  pinMode(buttonPin, INPUT);
+}
+
+int Botao::ButtonDown()
+{
+  leituraBotao(); 
+  if(Down)
+  {    
+    Down=false;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+int Botao::ButtonUp()
+{
+  leituraBotao();
+  if(Up)
+  {
+    Up=false;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+int Botao::ButtonPressed()
+{
+  leituraBotao();
+  if(Pressed)
+  {
+    return true;
+  }
+  else
+  {
+    return false; 
+  }
+
+}
+void Botao::leituraBotao() 
+{
+
+  int reading = digitalRead(buttonPin);
+
+
+  
+    if (reading != buttonState) 
+    {
+      buttonState = reading;
+
+
+      if (buttonState == HIGH) 
+      {
+        Pressed=true;
+        Down = true;
+      }
+      else
+      {
+        Pressed=false;
+        Up=true;
+      }
+    }
+  
+
+  lastButtonState = reading;
+}
+// Final Botão
+//#############################################################
+Botao botaoVermelho, botaoVerde, botaoAzul, botaoAmarelo,botaoInicio; // botoes
+bool comecou = false; // o jogo começou?
+bool apertadoAzul = false;
+bool apertadoVerde = false;
+bool apertadoAmarelo = false;
+bool apertadoVermelho = false;
+int LEDDaVez = 0; // qual LED está ativo atualmente?
+int velocidade = 30; // qual é o delay de acender um led e apagar o último?
+unsigned long cooldown;
+unsigned long tempoParaAcelerar;
+unsigned long timeout;
+unsigned long cor; // qual a cor que o LED acenderá?
+unsigned long apaga; // cor do LED apagada
+unsigned long proximaCor; // pesquisa a cor do próximo pixel (Usado no giraGira)
+
+// Padrão de cores adotado:
+unsigned long vermelho1;
+unsigned long azul1;
+unsigned long amarelo1;
+unsigned long verde1;
+
+unsigned long vermelho2;
+unsigned long azul2;
+unsigned long amarelo2;
+unsigned long verde2;
+
+unsigned long vermelho3;
+unsigned long azul3;
+unsigned long amarelo3;
+unsigned long verde3;
+
+unsigned long vermelho4;
+unsigned long azul4;
+unsigned long amarelo4;
+unsigned long verde4;
+
+
+void giraGira() {
+  if(millis() - cooldown > velocidade){
+  matrizLED.setPixelColor(LEDDaVez-1, proximaCor);
+  proximaCor = matrizLED.getPixelColor(LEDDaVez);
+  matrizLED.setPixelColor(LEDDaVez, cor);
+  matrizLED.show();
+  cooldown = millis();
+
+  if (LEDDaVez == 59){
+    LEDDaVez = -1;
+  }
+
+  LEDDaVez++;
+  }
+}
+
+void cores(){
+  matrizLED.setPixelColor(0, vermelho1);
+  matrizLED.setPixelColor(1, vermelho2);
+  matrizLED.setPixelColor(59, vermelho2);
+  matrizLED.setPixelColor(2, vermelho3);
+  matrizLED.setPixelColor(58, vermelho3);
+  matrizLED.setPixelColor(3, vermelho4);
+  matrizLED.setPixelColor(57, vermelho4);
+
+  matrizLED.setPixelColor(15, verde1);
+  matrizLED.setPixelColor(16, verde2);
+  matrizLED.setPixelColor(14, verde2);
+  matrizLED.setPixelColor(17, verde3);
+  matrizLED.setPixelColor(13, verde3);
+  matrizLED.setPixelColor(18, verde4);
+  matrizLED.setPixelColor(12, verde4);
+
+  matrizLED.setPixelColor(30, azul1);
+  matrizLED.setPixelColor(31, azul2);
+  matrizLED.setPixelColor(29, azul2);
+  matrizLED.setPixelColor(32, azul3);
+  matrizLED.setPixelColor(28, azul3);
+  matrizLED.setPixelColor(33, azul4);
+  matrizLED.setPixelColor(27, azul4);
+
+  matrizLED.setPixelColor(45, amarelo1);
+  matrizLED.setPixelColor(46, amarelo2);
+  matrizLED.setPixelColor(44, amarelo2);
+  matrizLED.setPixelColor(47, amarelo3);
+  matrizLED.setPixelColor(43, amarelo3);
+  matrizLED.setPixelColor(48, amarelo4);
+  matrizLED.setPixelColor(42, amarelo4);
+
+}
+
+void speedVar(int ledInput, int velocidadeVar){
+if(LEDDaVez == ledInput){
+  velocidade = velocidadeVar;
+}
+if(LEDDaVez == 15){
+  digitalWrite(13,HIGH);
+}
+}
+
+void checkVerde(){
+  if (botaoVerde.ButtonDown() && apertadoVerde == false && millis()-timeout > 1000) {
+    apertadoVerde = true; 
+      speedVar(12,500);
+      speedVar(13,300);
+      speedVar(14,100);
+      speedVar(15,50);
+      speedVar(16,100);
+      speedVar(17,300);
+      speedVar(18,500);
+      timeout=millis();
+    }
+}
+
+void checkVermelho(){
+  if (botaoVermelho.ButtonDown() && apertadoVermelho == false && millis()-timeout > 1000) {
+    apertadoVermelho = true; 
+      speedVar(57,500);
+      speedVar(58,300);
+      speedVar(59,100);
+      speedVar(0,50);
+      speedVar(1,100);
+      speedVar(2,300);
+      speedVar(3,500);
+      timeout=millis();
+    }
+}
+
+void checkAzul(){
+  if (botaoAzul.ButtonDown() && apertadoAzul == false && millis()-timeout > 1000) {
+    apertadoAzul = true; 
+      speedVar(27,500);
+      speedVar(28,300);
+      speedVar(29,100);
+      speedVar(30,50);
+      speedVar(31,100);
+      speedVar(32,300);
+      speedVar(33,500);
+      timeout=millis();
+    }
+}
+
+void checkAmarelo(){
+  if (botaoAmarelo.ButtonDown() && apertadoAmarelo == false && millis()-timeout > 1000) {
+    apertadoAmarelo = true; 
+      speedVar(42,500);
+      speedVar(43,300);
+      speedVar(44,100);
+      speedVar(45,50);
+      speedVar(46,100);
+      speedVar(47,300);
+      speedVar(48,500);
+      timeout=millis();
+    }
+}
+
+void iniciar(){
+  if(botaoInicio.ButtonDown()){
+    comecou=true;
+  }
+}
+
+
+
+void setup() {
+  botaoInicio.setupBot(12);
+  botaoVermelho.setupBot(8);
+  botaoVerde.setupBot(9);
+  botaoAzul.setupBot(10);
+  botaoAmarelo.setupBot(11);
+  matrizLED.begin();
+  matrizLED.show();
+
+  // Cores:
+  cor = matrizLED.Color(255, 255, 255); // no final será 255, 255, 255
+  apaga = matrizLED.Color(0,0,0); // apagado
+  vermelho1 = matrizLED.Color(255,0,0);
+  amarelo1 = matrizLED.Color(255,255,0);
+  verde1 = matrizLED.Color(0,255,0);
+  azul1 = matrizLED.Color(0,0,255);
+
+  vermelho2 = matrizLED.Color(191,0,0);
+  amarelo2 = matrizLED.Color(191,191,0);
+  verde2 = matrizLED.Color(0,191,0);
+  azul2 = matrizLED.Color(0,0,191);
+
+  vermelho3 = matrizLED.Color(127,0,0);
+  amarelo3 = matrizLED.Color(127,127,0);
+  verde3 = matrizLED.Color(0,127,0);
+  azul3 = matrizLED.Color(0,0,127);
+
+  vermelho4 = matrizLED.Color(63,0,0);
+  amarelo4 = matrizLED.Color(63,63,0);
+  verde4 = matrizLED.Color(0,63,0);
+  azul4 = matrizLED.Color(0,0,63);
+}
+  
+void loop() {
+  iniciar();
+  if(comecou){
+  checkVerde();
+  checkVermelho();
+  checkAzul();
+  checkAmarelo();
+  cores();
+  giraGira();
+      if(apertadoVerde && botaoVerde.ButtonUp()){
+    apertadoVerde = false;
+  }
+      if(apertadoVermelho && botaoVermelho.ButtonUp()){
+    apertadoVermelho = false;
+  }
+      if(apertadoAzul && botaoAzul.ButtonUp()){
+    apertadoAzul = false;
+  }
+      if(apertadoAmarelo && botaoAmarelo.ButtonUp()){
+    apertadoAmarelo = false;
+  }
+
+} 
+}
