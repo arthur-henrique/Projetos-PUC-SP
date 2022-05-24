@@ -1,0 +1,477 @@
+// Link para a montagem do circuito:
+// https://www.tinkercad.com/things/kcfyA13E0zD
+
+#define ledverde 2
+#define ledam 3
+#define ledaz 4
+#define ledverm 5
+#define ledbranco 13
+
+class Botao
+{
+  int Down=false,Up=false,Pressed=false;
+  int buttonPin;
+
+
+  int buttonState;             
+  int lastButtonState = LOW;   
+
+
+  unsigned long lastDebounceTime = 0;  
+  unsigned long debounceDelay = 20;    
+
+  public:
+  void setupBot(int p);
+  int ButtonDown();
+  int ButtonUp();
+  int ButtonPressed();
+
+
+  private:
+  void leituraBotao() ;
+};
+
+
+void Botao::setupBot(int p) 
+{
+  buttonPin=p;
+  pinMode(buttonPin, INPUT);
+}
+
+int Botao::ButtonDown()
+{
+  leituraBotao(); 
+  if(Down)
+  {    
+    Down=false;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+int Botao::ButtonUp()
+{
+  leituraBotao();
+  if(Up)
+  {
+    Up=false;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+int Botao::ButtonPressed()
+{
+  leituraBotao();
+  if(Pressed)
+  {
+    return true;
+  }
+  else
+  {
+    return false; 
+  }
+
+}
+void Botao::leituraBotao() 
+{
+
+  int reading = digitalRead(buttonPin);
+
+
+  if (reading != lastButtonState) 
+  {
+
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) 
+  {
+
+    if (reading != buttonState) 
+    {
+      buttonState = reading;
+
+
+      if (buttonState == HIGH) 
+      {
+        Pressed=true;
+        Down = true;
+      }
+      else
+      {
+        Pressed=false;
+        Up=true;
+      }
+    }
+  }
+
+  lastButtonState = reading;
+}
+
+
+int leds[] = {4,3,2,5};
+int ledsfinal[] = {5,4,3,2};
+Botao botVerde, botAmar, botAzul, botVerme, botReset, botGame;
+
+bool booleanRandom = false;
+int RandomLeds = 0;
+int SequenciaLugar = 0;
+bool BooleanInicial = false;
+int sequenciaG[] = {0,0,0,0,0,0,0,0,0,0};
+int sequencia[] = {5,5,5,5,5,5,5,5,5,5};
+unsigned int playerinput;
+int possequen = 0;
+int contadorpos = 0;
+bool Start = false;
+bool mostrarseq = false;
+String gamestate = "default"; 
+String game = "";
+bool isplaying = false;
+
+//parte que importa
+void checkingPress(int ledColor, int playerinput){
+  gamestate = "jogando";
+  digitalWrite(ledColor, HIGH);
+  delay(400);
+  digitalWrite (ledColor, LOW);
+  if(possequen == SequenciaLugar){
+    sequencia[possequen] = playerinput;
+    possequen = 0;
+    Start = true;
+    gamestate = "waiting";
+  }else if(playerinput == sequencia[possequen]){
+    possequen++;
+  }else{
+    for(int i = 0;i<4;i++){
+      digitalWrite(ledverm, HIGH);
+      delay(500);
+      digitalWrite(ledverm, LOW);
+      delay(500);
+    }
+    mostrarseq = false;
+    Start = true;
+    possequen = 0;
+    SequenciaLugar = 0;
+    game = "";
+
+  }
+}
+void pressGenius(int ledColor,int playerinput){
+    digitalWrite(ledColor, HIGH);
+    delay(500);
+    digitalWrite(ledColor,LOW);
+    	if(playerinput == sequenciaG[possequen]){
+        possequen++;
+    	delay(1000);
+          if(SequenciaLugar == possequen){
+        	mostrarseq = true;
+          }
+        }else{
+          for(int i = 0;i<4;i++){
+            digitalWrite(ledverm, HIGH);
+            delay(200);
+            digitalWrite(ledverm, LOW);
+            delay(300);
+          }
+          booleanRandom = false;
+  		  mostrarseq = false;
+      	  Start = true;
+          possequen = 0;
+          SequenciaLugar = 0;
+          game = "";
+          }
+}
+
+
+
+
+void trocadejogo(){
+  if((game == "PvP"||game=="") && isplaying == false && botGame.ButtonDown()){
+    game = "Genius";
+
+  }
+  if(game == "Genius" && isplaying == false && botGame.ButtonDown()){
+    game = "PvP";
+
+  }
+  if(game == "Genius" && isplaying==false){
+    digitalWrite(ledverde,HIGH);
+    digitalWrite(ledverm,LOW);
+  }
+    if(game == "PvP" && isplaying==false){
+    digitalWrite(ledverde,LOW);
+    digitalWrite(ledverm,HIGH);
+  }
+  
+}
+
+void setup(){
+  randomSeed(analogRead(0));
+  Serial.begin(9600);
+  botVerde.setupBot(6);
+  botAmar.setupBot(7);
+  botAzul.setupBot(8);
+  botVerme.setupBot(9);
+  botReset.setupBot(12);
+  botGame.setupBot(11);
+
+  pinMode(ledbranco,OUTPUT);
+
+  for(int i = 0;i<4;i++){
+    pinMode(leds[i], OUTPUT);
+  }
+
+}
+void jogandoPVP()
+{
+  //Mostrar sequência
+  Serial.print("game rodando");
+  if(botReset.ButtonDown() && Start == true && gamestate == "waiting"){
+    Start = false;
+    mostrarseq = true;
+    Serial.print("mostrar sequencia");
+  }
+     
+  if(mostrarseq == true && BooleanInicial == false)
+  {
+    BooleanInicial = true;
+    mostrarseq = false;
+  }
+  
+  if(BooleanInicial == true)
+  {
+    digitalWrite(ledbranco,HIGH);
+    if(contadorpos <= SequenciaLugar)
+    {
+      digitalWrite(leds[sequencia[contadorpos]], HIGH);
+      delay(500);
+      digitalWrite(leds[sequencia[contadorpos]],LOW);
+      delay(1000);
+      contadorpos++;
+      possequen = 0;
+    }
+    else
+    {
+    BooleanInicial = false;
+     SequenciaLugar++;
+     contadorpos = 0;
+	 gamestate = "jogando";
+    }
+  }
+  
+
+  
+  //Aqui para baixo reinicia quando zera o jogo
+  if(SequenciaLugar>11){
+   BooleanInicial = false;
+    SequenciaLugar = 0;
+    game="";
+  }
+ 
+  //led branco
+  if(gamestate == "waiting"){
+    digitalWrite(ledbranco,HIGH);
+  }else{
+    digitalWrite(ledbranco,LOW);
+  }
+  
+  //jogo 
+  
+  
+  if(botVerde.ButtonDown()){
+    checkingPress(ledverde,2);
+  }
+  
+  if(botAmar.ButtonDown()){
+    checkingPress(ledam,1);
+  }
+  
+  if(botAzul.ButtonDown()){
+    checkingPress(ledaz,0);
+  }
+  
+  if(botVerme.ButtonDown()){
+    checkingPress(ledverm,3);
+  }
+  
+  if(possequen > 10){
+    mostrarseq = false;
+    Start = true;
+    possequen = 0;
+    SequenciaLugar = 0;
+    for(int a = 0; a < 3; a++){
+    for(int i = 0;i<4;i++){
+    	digitalWrite(ledsfinal[i], HIGH);
+      	delay(200);
+        digitalWrite(ledsfinal[i], LOW);
+          }
+    }
+    delay(1000);
+    for(int i = 0;i<4;i++){
+    	digitalWrite(leds[i], LOW);
+          }
+  }
+  
+}
+void jogandoGENIUS()
+{
+  Serial.print("game rodando Genius");
+  //Gerar sequencia
+    if (booleanRandom == false){
+     for(int i = 0;i <= 10;i++){
+      RandomLeds = random (4);
+      sequenciaG[possequen] = RandomLeds;
+      possequen++;
+     }
+    Serial.print(sequenciaG[possequen]);
+    booleanRandom = true;
+    possequen = 0;
+  }
+  
+  //Mostrar sequência
+  if(botReset.ButtonDown() && Start == true){
+    Serial.print("Mostrar Sequencia");
+    Start = false;
+    mostrarseq = true;
+  }
+     
+  if(mostrarseq == true && BooleanInicial == false)
+  {
+    BooleanInicial = true;
+    mostrarseq = false;
+  }
+  
+  if(BooleanInicial == true)
+  {
+    if(contadorpos <= SequenciaLugar)
+    {
+      digitalWrite(leds[sequenciaG[contadorpos]], HIGH);
+      delay(500);
+      digitalWrite(leds[sequenciaG[contadorpos]],LOW);
+      delay(1000);
+      contadorpos++;
+      possequen = 0;
+    }
+    else
+    {
+    BooleanInicial = false;
+     SequenciaLugar++;
+     contadorpos = 0;
+    }
+  }
+  
+  //Aqui para baixo reinicia quando zera o jogo
+  if(SequenciaLugar>11){
+   BooleanInicial = false;
+    SequenciaLugar = 0;
+    game="";
+  }
+ 
+  
+  //jogo 
+  
+  
+  
+  if(botAzul.ButtonDown()){
+    pressGenius(ledaz,0);
+  }
+  if(botAmar.ButtonDown()){
+    pressGenius(ledam,1);
+  }
+  
+  if(botVerde.ButtonDown()){
+    pressGenius(ledverde,2);
+  }
+  
+  if(botVerme.ButtonDown()){
+    pressGenius(ledverm,3);
+  }
+  
+  //ENDGAME
+  
+  if(possequen > 10){
+    booleanRandom = false;
+    mostrarseq = false;
+    Start = true;
+    possequen = 0;
+    SequenciaLugar = 0;
+    for(int a = 0; a < 3; a++){
+    for(int i = 0;i<4;i++){
+    	digitalWrite(ledsfinal[i], HIGH);
+      	delay(200);
+        digitalWrite(ledsfinal[i], LOW);
+          }
+    }
+    delay(1000);
+    for(int i = 0;i<4;i++){
+    	digitalWrite(leds[i], LOW);
+          }
+  }
+}
+
+void jogarPVP()
+{
+  if(botReset.ButtonDown()&& isplaying==false)
+  {
+    Serial.print("settando config PvP");
+    isplaying=true;
+    digitalWrite(ledverm,LOW);
+    SequenciaLugar = 0;
+    BooleanInicial = false;
+    for(int i=0;i<10;i++){
+    sequencia[i] = 5;
+    }
+    playerinput;
+    possequen = 0;
+    contadorpos = 0;
+    Start = false;
+    mostrarseq = false;
+  }
+  else if(isplaying)
+  {
+    jogandoPVP();
+  }
+  
+}
+void jogarGENIUS()
+{
+  if(botReset.ButtonDown()&& isplaying==false)
+  {
+    Serial.print("settando config Genius");
+    isplaying=true;
+    digitalWrite(ledverde,LOW);
+    Start = true;
+    mostrarseq = false;
+    booleanRandom = false;
+    SequenciaLugar = 0;
+    RandomLeds = 0;
+    BooleanInicial = false;
+    for(int i=0;i<10;i++){
+    sequenciaG[i] = 0;
+    }
+    playerinput;
+    possequen = 0;
+    contadorpos = 0;
+  }
+  else if(isplaying)
+  {
+    jogandoGENIUS();
+  }
+}
+
+void loop(){
+  trocadejogo();
+  if(game=="PvP")
+  {
+    jogarPVP();  
+  }
+  else if(game=="Genius")
+  {
+    jogarGENIUS();
+  }  
+}
