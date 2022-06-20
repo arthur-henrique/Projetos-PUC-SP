@@ -1,0 +1,1012 @@
+#include <Adafruit_NeoPixel.h>
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_GFX.h>
+
+#define pinMatrizLED 6
+#define OLED_WIDTH 128
+#define OLED_HEIGHT 32
+#define OLED_ADDR   0x3C
+
+Adafruit_NeoPixel matrizLED = Adafruit_NeoPixel(60, pinMatrizLED, NEO_GRB + NEO_KHZ800);
+Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT);
+void(* resetFunc) (void) = 0;
+// Inicio Botão - código fornecido pelo Rogério
+class Botao
+{
+  int Down=false,Up=false,Pressed=false;
+  int buttonPin;
+
+
+  int buttonState;             
+  int lastButtonState = LOW;   
+
+
+  unsigned long lastDebounceTime;
+  unsigned long debounceDelay = 20;    
+
+  public:
+  void setupBot(int p);
+  int ButtonDown();
+  int ButtonUp();
+  int ButtonPressed();
+
+
+  private:
+  void leituraBotao() ;
+};
+
+void Botao::setupBot(int p) 
+{
+  buttonPin=p;
+  pinMode(buttonPin, INPUT_PULLUP);
+}
+
+int Botao::ButtonDown()
+{
+  leituraBotao(); 
+  if(Down)
+  {    
+    Down=false;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+int Botao::ButtonUp()
+{
+  leituraBotao();
+  if(Up)
+  {
+    Up=false;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+int Botao::ButtonPressed()
+{
+  leituraBotao();
+  if(Pressed)
+  {
+    return true;
+  }
+  else
+  {
+    return false; 
+  }
+
+}
+void Botao::leituraBotao() 
+{
+ 
+  int reading = digitalRead(buttonPin);
+
+  if (reading != lastButtonState) 
+  {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) 
+  {
+
+    if (reading != buttonState) 
+    {
+      buttonState = reading;
+    
+
+      if (buttonState == LOW) 
+      {
+        Pressed=true;
+        Down = true;
+      }
+      else
+      {
+        Pressed=false;
+        Up=true;
+      }
+    }
+  }
+  lastButtonState = reading;
+}
+// Final Botão
+//#############################################################
+Botao botaoVermelho, botaoVerde, botaoAzul, botaoAmarelo,botaoInicio; // botoes
+bool comecou = false; // o jogo começou?
+// Checagens se os respectivos botoes foram/estão apertados
+bool booleanInicial = true;
+bool apertadoAzul = false;
+bool apertadoVerde = false;
+bool apertadoAmarelo = false;
+bool apertadoVermelho = false;
+// Checagens se as cores pontuaram. Usados para indicar a pontuação a cada apertada.
+bool pontuouVermelho = false;
+bool pontuouVerde = false;
+bool pontuouAzul = false;
+bool pontuouAmarelo = false;
+bool vermelhoVenceu =  false;
+bool verdeVenceu = false;
+bool azulVenceu = false;
+bool amareloVenceu = false;
+bool redOne = true;
+bool greenOne = true;
+bool blueOne = true;
+bool yellowOne = true;
+bool trocaDeVolta = false;
+bool pisca = false;
+int LEDDaVez = 0; // qual LED está ativo atualmente?
+int velocidade = 30; // qual é o delay de acender um led e apagar o último?
+int pontosVermelho = 0; // total de pontos da cor
+int pontosVerde = 0; // total de pontos da cor
+int pontosAzul = 0; // total de pontos da cor
+int pontosAmarelo = 0; // total de pontos da cor
+int pontosTempVermelho = 0; // Quantos pontos a cor ganhou a cada aperto
+int pontosTempVerde = 0; // Quantos pontos a cor ganhou a cada aperto
+int pontosTempAzul = 0; // Quantos pontos a cor ganhou a cada aperto
+int pontosTempAmarelo = 0; // Quantos pontos a cor ganhou a cada aperto
+int cooldownTimeoutVermelho = 2000;
+int cooldownTimeoutVerde = 2000;
+int cooldownTimeoutAzul = 2000;
+int cooldownTimeoutAmarelo = 2000;
+int segundos = 5;
+int posicaoTela = 0;
+int pontosDoVencedor = 0;
+int pontosDosJogadores [] = {0,0,0,0};
+int speed1 = 50;
+int speed2 = 100;
+int speed3 = 200;
+int speed4 = 300;
+unsigned long timeout;
+unsigned long cooldown; // Temporizador
+unsigned long timeoutVermelho; // Temporizador
+unsigned long timeoutVerde;
+unsigned long timeoutAzul;
+unsigned long timeoutAmarelo;
+unsigned long cor; // qual a cor que o LED acenderá?
+unsigned long apaga; // cor do LED apagada
+unsigned long proximaCor; // pesquisa a cor do próximo pixel (Usado no giraGira)
+int j0 = 0;
+int j2 = 30;
+int j3 = 20;
+int j4 = 40;
+int j5 = 15;
+int j6 = 30;
+int j7 = 45;
+int voltas = 7;
+
+
+// Variaveis das cores
+unsigned long vermelho1;
+unsigned long azul1;
+unsigned long amarelo1;
+unsigned long verde1;
+
+unsigned long vermelho2;
+unsigned long azul2;
+unsigned long amarelo2;
+unsigned long verde2;
+
+unsigned long vermelho3;
+unsigned long azul3;
+unsigned long amarelo3;
+unsigned long verde3;
+
+unsigned long vermelho4;
+unsigned long azul4;
+unsigned long amarelo4;
+unsigned long verde4;
+
+uint32_t arrayAzul[4];
+uint32_t arrayAmarelo[4];
+uint32_t arrayVermelho[4];
+uint32_t arrayVerde[4];
+
+int arrayPontos[4];
+int arrayCd[4];
+int arraySpeed[4];
+int sequenciaDeLeds[] = {3,2,1,0,1,2,3};
+int sequenciaDeLeds2[] = {0,1,2,3,2,1,0};
+
+void setup() {
+  // Botões, componentes e cores são inicializados aqui
+  botaoInicio.setupBot(12);
+  botaoVermelho.setupBot(8);
+  botaoVerde.setupBot(9);
+  botaoAzul.setupBot(10);
+  botaoAmarelo.setupBot(11);
+  matrizLED.begin();
+  display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+  matrizLED.show();
+  Serial.begin(115200);
+
+  arrayAzul[0]=matrizLED.Color(0,0,120);
+  arrayAzul[1]=matrizLED.Color(0,0,60);
+  arrayAzul[2]=matrizLED.Color(0,0,30);
+  arrayAzul[3]=matrizLED.Color(0,0,10);
+  arrayAmarelo[0]=matrizLED.Color(120,120,0);
+  arrayAmarelo[1]=matrizLED.Color(60,60,0);
+  arrayAmarelo[2]=matrizLED.Color(30,30,0);
+  arrayAmarelo[3]=matrizLED.Color(10,10,0);
+  arrayVermelho[0]=matrizLED.Color(120,0,0);
+  arrayVermelho[1]=matrizLED.Color(60,0,0);
+  arrayVermelho[2]=matrizLED.Color(30,0,0);
+  arrayVermelho[3]=matrizLED.Color(10,0,0);
+  arrayVerde[0]=matrizLED.Color(0,120,0);
+  arrayVerde[1]=matrizLED.Color(0,60,0);
+  arrayVerde[2]=matrizLED.Color(0,30,0);
+  arrayVerde[3]=matrizLED.Color(0,10,0);
+  arraySpeed[0]= speed1;
+  arraySpeed[1]= speed2;
+  arraySpeed[2]= speed3;
+  arraySpeed[3]= speed4;
+  arrayCd[0] = 1000;
+  arrayCd[1] = 2000;
+  arrayCd[2] = 2500;
+  arrayCd[3] = 4000;
+  arrayPontos[0] = 4;
+  arrayPontos[1] = 3;
+  arrayPontos[2] = 2;
+  arrayPontos[3] = 1;
+
+
+
+  // Cores:
+  cor = matrizLED.Color(255, 255, 255); // Ligado
+  apaga = matrizLED.Color(0,0,0); // Apagado
+  vermelho1 = matrizLED.Color(120,0,0);
+  amarelo1 = matrizLED.Color(120,120,0);
+  verde1 = matrizLED.Color(0,120,0);
+  azul1 = matrizLED.Color(0,0,120);
+
+  vermelho2 = matrizLED.Color(60,0,0);
+  amarelo2 = matrizLED.Color(60,60,0);
+  verde2 = matrizLED.Color(0,60,0);
+  azul2 = matrizLED.Color(0,0,60);
+
+  vermelho3 = matrizLED.Color(30,0,0);
+  amarelo3 = matrizLED.Color(30,30,0);
+  verde3 = matrizLED.Color(0,30,0);
+  azul3 = matrizLED.Color(0,0,30);
+
+  vermelho4 = matrizLED.Color(10,0,0);
+  amarelo4 = matrizLED.Color(10,10,0);
+  verde4 = matrizLED.Color(0,10,0);
+  azul4 = matrizLED.Color(0,0,10);
+  //cores();
+}
+
+
+// Funções
+
+void timer(){
+ if(millis() - timeout >= 1000)
+ {
+  segundos--;
+  timeout = millis();
+ }
+}
+
+void giraGira() {
+  if(millis() - cooldown > velocidade){
+  matrizLED.setPixelColor(LEDDaVez-1, proximaCor);
+  proximaCor = matrizLED.getPixelColor(LEDDaVez);
+  matrizLED.setPixelColor(LEDDaVez, cor);
+  matrizLED.show();
+  cooldown = millis();
+  if (LEDDaVez >= 59){
+      LEDDaVez = -1;
+      matrizLED.setPixelColor(59, apaga);
+      voltas--;
+      trocaDeVolta = true;
+      Serial.println(voltas);
+    }
+
+  //rever isso
+
+  LEDDaVez++;
+  }
+}
+
+/*
+void cores(){
+
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+4,arrayVermelho[sequenciaDeLeds[i]]);
+
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+19,arrayVerde[sequenciaDeLeds[i]]);
+
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+34,arrayAzul[sequenciaDeLeds[i]]);
+
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+49,arrayAmarelo[sequenciaDeLeds[i]]);
+
+}
+*/
+void speedVarLap()
+{
+  if(trocaDeVolta){
+  speed1 -= 5;
+  speed2 -= 10;
+  speed3 -= 20;
+  speed4 -= 30;
+  trocaDeVolta = false;
+}
+}
+
+void speedVar(int ledInput, int velocidadeVar){
+  if(LEDDaVez == ledInput){
+    velocidade = velocidadeVar;
+  }
+}
+
+void cdVariavelVermelho(int ledInput, int numCooldownTimeoutVermelho){
+  if(LEDDaVez == ledInput){
+  cooldownTimeoutVermelho = numCooldownTimeoutVermelho;
+  }
+}
+
+void cdVariavelVerde(int ledInput, int numCooldownTimeoutVerde){
+  if(LEDDaVez == ledInput){
+  cooldownTimeoutVerde = numCooldownTimeoutVerde;
+  }
+}
+
+void cdVariavelAzul(int ledInput, int numCooldownTimeoutAzul){
+  if(LEDDaVez == ledInput){
+  cooldownTimeoutAzul = numCooldownTimeoutAzul;
+  }
+}
+
+void cdVariavelAmarelo(int ledInput, int numCooldownTimeoutAmarelo){
+  if(LEDDaVez == ledInput){
+  cooldownTimeoutAmarelo = numCooldownTimeoutAmarelo;
+  }
+}
+
+void pontuacaoVermelho(int ledInput, int pontos){
+  if(LEDDaVez == ledInput){
+    pontosVermelho += pontos;
+    pontosDosJogadores[0] = pontosVermelho;
+    pontosTempVermelho = pontos;
+    pontuouVermelho = true;
+  }
+}
+
+void pontuacaoVerde(int ledInput, int pontos){
+  if(LEDDaVez == ledInput){
+    pontosVerde += pontos;
+    pontosDosJogadores[1] = pontosVerde;
+    pontosTempVerde = pontos;
+    pontuouVerde = true;
+  }
+}
+
+void pontuacaoAzul(int ledInput, int pontos){
+  if(LEDDaVez == ledInput){
+    pontosAzul += pontos;
+    pontosDosJogadores[2] = pontosAzul;
+    pontosTempAzul = pontos;
+    pontuouAzul = true;
+  }
+}
+
+void pontuacaoAmarelo(int ledInput, int pontos){
+  if(LEDDaVez == ledInput){
+    pontosAmarelo += pontos;
+    pontosDosJogadores[3] = pontosAmarelo;
+    pontosTempAmarelo = pontos;
+    pontuouAmarelo = true;
+  }
+}
+
+void checkVermelho(){
+  if(botaoVermelho.ButtonDown()){
+  if (apertadoVermelho == false && millis()-timeoutVermelho > cooldownTimeoutVermelho) {
+    apertadoVermelho = true; 
+    for(int i = 0;i<7;i++)
+    {
+      speedVar(i+5,arraySpeed[sequenciaDeLeds[i]]);
+      cdVariavelVermelho(i+5, arrayCd[sequenciaDeLeds[i]]);
+      pontuacaoVermelho(i+5, arrayPontos[sequenciaDeLeds[i]]);
+  }
+    }
+    timeoutVermelho=millis();  
+  }
+}
+
+void checkVerde(){
+  if(botaoVerde.ButtonDown()){
+  if (apertadoVerde == false && millis()-timeoutVerde > cooldownTimeoutVerde) {
+    apertadoVerde = true; 
+    for(int i = 0;i<7;i++){
+      speedVar(i+20,arraySpeed[sequenciaDeLeds[i]]);
+      cdVariavelVerde(i+20, arrayCd[sequenciaDeLeds[i]]);
+      pontuacaoVerde(i+20, arrayPontos[sequenciaDeLeds[i]]);
+    }
+    }
+    timeoutVerde=millis();
+  }
+}
+
+void checkAzul(){
+  if(botaoAzul.ButtonDown()){
+  if (apertadoAzul == false && millis()-timeoutAzul > cooldownTimeoutAzul) {
+    apertadoAzul = true; 
+      for(int i = 0;i<7;i++)
+      {
+       speedVar(i+35,arraySpeed[sequenciaDeLeds[i]]);
+       cdVariavelAzul(i+35, arrayCd[sequenciaDeLeds[i]]);
+       pontuacaoAzul(i+35, arrayPontos[sequenciaDeLeds[i]]);
+      }
+    }
+    timeoutAzul=millis();
+}
+}
+
+void checkAmarelo(){
+  if (botaoAmarelo.ButtonDown()){
+  if (apertadoAmarelo == false && millis()-timeoutAmarelo > cooldownTimeoutAmarelo) {
+    apertadoAmarelo = true; 
+      for(int i = 0;i<7;i++){
+        speedVar(i+50,arraySpeed[sequenciaDeLeds[i]]);
+        cdVariavelAmarelo(i+50, arrayCd[sequenciaDeLeds[i]]);
+        pontuacaoAmarelo(i+50, arrayPontos[sequenciaDeLeds[i]]);
+      }
+     }
+     timeoutAmarelo=millis();
+}
+}
+void piscarVerde(){
+  if (pontuouVerde && greenOne){
+    for(int i = 0;i<7;i++)
+    matrizLED.setPixelColor(i+19, apaga);
+
+    greenOne=false;
+  }
+  if (millis() - timeoutVerde > cooldownTimeoutVerde){
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+19,arrayVerde[sequenciaDeLeds[i]]);
+
+     greenOne=true;
+
+}
+}
+void piscarVermelho(){
+  if (pontuouVermelho && redOne){
+    for(int i = 0;i<7;i++)
+    matrizLED.setPixelColor(i+4, apaga);
+    
+    redOne = false;
+  }
+  if (millis() - timeoutVermelho > cooldownTimeoutVermelho){
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+4,arrayVermelho[sequenciaDeLeds[i]]);
+
+    redOne=true;
+
+}
+}
+void piscarAzul(){
+  if (pontuouAzul && blueOne){
+    for(int i = 0;i<7;i++)
+    matrizLED.setPixelColor(i+34, apaga);
+
+    blueOne = false;
+  }
+
+  if (millis() - timeoutAzul > cooldownTimeoutAzul){
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+34,arrayAzul[sequenciaDeLeds[i]]);
+
+    blueOne = true;
+
+}
+}
+void piscarAmarelo(){
+  if (pontuouAmarelo && yellowOne){
+    for(int i = 0;i<7;i++)
+    matrizLED.setPixelColor(i+49, apaga);
+
+    yellowOne = false;
+
+  }
+  if (millis() - timeoutAmarelo > cooldownTimeoutAmarelo){
+    for(int i=0;i<7;i++)
+      matrizLED.setPixelColor(i+49,arrayAmarelo[sequenciaDeLeds[i]]);
+
+     yellowOne = true;
+
+}
+}
+void configuracaoInicial()
+{
+  resetFunc();
+}
+
+void reset()
+{
+if (botaoInicio.ButtonDown() && comecou)
+  {
+configuracaoInicial();
+}
+}
+
+void iniciar(){
+  if(botaoInicio.ButtonDown() && booleanInicial){
+  matrizLED.setPixelColor(LEDDaVez-1, apaga);
+  proximaCor = matrizLED.getPixelColor(LEDDaVez);
+  matrizLED.show();
+    comecou=true;
+    pisca = true;
+    booleanInicial = false;
+    Serial.println("Apertou");
+    //configuracaoInicial();
+  }
+}
+
+void mostraTela(){
+  display.clearDisplay();
+  display.drawFastHLine(0, 16, 127, SSD1306_WHITE);
+  display.drawFastVLine(63, 16, 31, SSD1306_WHITE);
+  display.drawFastVLine(64, 16, 31, SSD1306_WHITE);
+  display.drawFastVLine(42, 0, 16, SSD1306_WHITE);
+  display.drawFastVLine(85, 0, 16, SSD1306_WHITE);
+
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(6, 0);
+  display.println("Verde");
+  display.setCursor(93, 0);
+  display.println("Azul");
+  display.setCursor(4, 17);
+  display.println("Vermelho");
+  display.setCursor(80, 17);
+  display.println("Amarelo");
+
+
+  display.setCursor(15, 9);
+  display.println(pontosVerde);
+  display.setCursor(96, 9);
+  display.println(pontosAzul);
+  display.setCursor(26, 25);
+  display.println(pontosVermelho);
+  display.setCursor(90, 25);
+  display.println(pontosAmarelo);
+
+  if (pontuouVerde){
+    display.setCursor(26, 9);
+    display.println("+");
+    display.setCursor(32, 9);
+    display.println(pontosTempVerde);
+
+    if (millis() - timeoutVerde >= 1000){
+      pontuouVerde = false;
+    }
+  }
+
+  if (pontuouAzul){
+    display.setCursor(107, 9);
+    display.println("+");
+    display.setCursor(113, 9);
+    display.println(pontosTempAzul);
+
+    if (millis() - timeoutAzul > 1000){
+      pontuouAzul = false;
+    }
+  }
+
+  if (pontuouVermelho){
+    display.setCursor(37, 25);
+    display.println("+");
+    display.setCursor(43, 25);
+    display.println(pontosTempVermelho);
+
+    if (millis() - timeoutVermelho > 1000){
+      pontuouVermelho = false;
+    }
+  }
+
+  if (pontuouAmarelo){
+    display.setCursor(101, 25);
+    display.println("+");
+    display.setCursor(107, 25);
+    display.println(pontosTempAmarelo);
+
+    if (millis() - timeoutAmarelo > 1000){
+      pontuouAmarelo = false;
+    }
+  }
+
+  
+  display.setCursor(58,3);
+  display.println(voltas);
+
+  
+}
+
+void umVencedor(long cor, int primeiroPixel, int ultimoPixel){
+  j0 = primeiroPixel;
+  if(primeiroPixel < ultimoPixel){
+  for(int i = primeiroPixel; i < ultimoPixel; i++)
+  {
+    matrizLED.setPixelColor(i,cor);
+    matrizLED.setPixelColor(j0,cor);
+    matrizLED.show();
+    delay(50);  
+    j0--;
+    if(i >= 59)
+    {
+      i = 0;
+    }
+    if(j0 < 0)
+    {
+      j0 = 59;
+    }
+  }
+  }
+  if(primeiroPixel > ultimoPixel)
+  {
+  for(int i = primeiroPixel; i > ultimoPixel; i--)
+  {
+    matrizLED.setPixelColor(i,cor);
+    matrizLED.setPixelColor(j0,cor);
+    matrizLED.show();
+    delay(50);  
+    j0++;
+    if(j0 > 59)
+    {
+      j0 = 0;
+    }
+
+    if(i < 0)
+    {
+      i = 59;
+    }
+  }
+  }
+  delay(300);
+  matrizLED.clear();
+  matrizLED.show();
+  delay(430);
+  matrizLED.fill(cor);
+  matrizLED.show();
+  delay(430);
+  matrizLED.clear();
+  matrizLED.show();
+  delay(430);
+  matrizLED.fill(cor);
+  matrizLED.show();
+  delay(450);
+}
+
+void doisVencedores(long cor1, long cor2){
+  for(int i = 0; i < 60; i++)
+  {
+    matrizLED.setPixelColor(i,cor1);
+    matrizLED.setPixelColor(j2,cor2);
+    matrizLED.show();
+    delay(50);  
+    j2++;
+    /*if(i > 59)
+    {
+      i = 0;
+    }*/
+    if(j2 > 59)
+    {
+      j2 = 0;
+    }
+  }
+   delay(1000);
+}
+
+void tresVencedores(long cor1, long cor2, long cor3){
+  for(int i = 0; i < 60; i++)
+  {
+    matrizLED.setPixelColor(i,cor1);
+    matrizLED.setPixelColor(j3,cor2);
+    matrizLED.setPixelColor(j4,cor3);
+    matrizLED.show();
+    delay(50);  
+    j3++;
+    j4++;
+    /*if(i > 59)
+    {
+      i = 0;
+    }*/
+    if(j3 > 59)
+    {
+      j3 = 0;
+    }
+        if(j4 > 59)
+    {
+      j4 = 0;
+    }
+  }
+  delay(1000);
+}
+
+void quatroVencedores(){
+  for(int i = 0; i < 60; i++)
+  {
+    matrizLED.setPixelColor(i,vermelho1);
+    matrizLED.setPixelColor(j5,verde1);
+    matrizLED.setPixelColor(j6,azul1);
+    matrizLED.setPixelColor(j7,amarelo1);
+    matrizLED.show();
+    delay(50);  
+    j5++;
+    j6++;
+    j7++;
+    if(j5 > 59)
+    {
+      j5 = 0;
+    }
+   if(j6 > 59)
+    {
+      j6 = 0;
+    }
+   if(j7 > 59)
+    {
+      j7 = 0;
+    }
+  }
+  delay(1000);
+}
+
+
+void terminou(){
+
+  comecou = false;
+  booleanInicial = true;
+  quemVenceu();
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0,posicaoTela);
+  
+if(vermelhoVenceu){
+      display.print("Vermelho Wins --> ");
+      display.print(pontosVermelho);
+      posicaoTela += 8;
+    }else
+    {
+      display.print("Vermelho --> ");
+      display.print(pontosVermelho);
+      posicaoTela += 8;
+    }
+    if(verdeVenceu){
+      display.setCursor(0, posicaoTela);
+      display.print("Verde Wins --> ");
+      display.print(pontosVerde);
+      posicaoTela += 8;
+    }else
+    {
+      display.setCursor(0, posicaoTela);
+      display.print("Verde --> ");
+      display.print(pontosVerde);
+      posicaoTela += 8;
+    }
+    if(azulVenceu){
+      display.setCursor(0, posicaoTela);
+      display.print("Azul Wins --> ");
+      display.print(pontosAzul);
+      posicaoTela += 8;
+    }else
+    {
+      display.setCursor(0, posicaoTela);
+      display.print("Azul --> ");
+      display.print(pontosAzul);
+      posicaoTela += 8;
+    }
+    if(amareloVenceu){
+      display.setCursor(0, posicaoTela);
+      display.print("Amarelo Wins --> ");
+      display.print(pontosAmarelo);
+    }else
+    {
+      display.setCursor(0, posicaoTela);
+      display.print("Amarelo --> ");
+      display.print(pontosAmarelo);
+      posicaoTela += 8;
+    }
+  
+  display.display();
+  matrizLED.clear();
+
+  //um vencedor:
+
+  if(vermelhoVenceu==true && verdeVenceu==false && amareloVenceu==false && azulVenceu==false){
+   umVencedor(vermelho1, 7, 38);
+  }
+
+  if(verdeVenceu==true && vermelhoVenceu==false && amareloVenceu==false && azulVenceu==false){
+   umVencedor(verde1, 22, 53);
+  }
+
+  if(azulVenceu==true && verdeVenceu==false && amareloVenceu==false && vermelhoVenceu==false){
+   umVencedor(azul1, 37, 6);  
+  }
+
+  if(amareloVenceu==true && verdeVenceu==false && vermelhoVenceu==false && azulVenceu==false){
+   umVencedor(amarelo1, 52, 20);
+  }
+
+  //dois vencedores:
+
+  if(vermelhoVenceu==true && verdeVenceu==true && amareloVenceu==false && azulVenceu==false){
+   doisVencedores(vermelho1,verde1);
+  }
+
+  if(vermelhoVenceu==true && verdeVenceu==false && amareloVenceu==true && azulVenceu==false){
+   doisVencedores(vermelho1,amarelo1);
+  }
+
+  if(vermelhoVenceu==true && verdeVenceu==false && amareloVenceu==false && azulVenceu==true){
+   doisVencedores(vermelho1,azul1);
+  }
+
+  if(vermelhoVenceu==false && verdeVenceu==true && amareloVenceu==true && azulVenceu==false){
+   doisVencedores(verde1,amarelo1);
+  }
+
+  if(vermelhoVenceu==false && verdeVenceu==true && amareloVenceu==false && azulVenceu==true){
+   doisVencedores(verde1,azul1);
+  }
+
+  if(vermelhoVenceu==false && verdeVenceu==false && amareloVenceu==true && azulVenceu==true){
+   doisVencedores(azul1,amarelo1);
+  }
+
+  //três vencedores:
+
+  if(vermelhoVenceu==true && verdeVenceu==true && amareloVenceu==true && azulVenceu==false){
+   tresVencedores(vermelho1,verde1,amarelo1);
+  }
+
+  if(vermelhoVenceu==true && verdeVenceu==true && amareloVenceu==false && azulVenceu==true){
+   tresVencedores(vermelho1,verde1,azul1); 
+  }
+
+  if(vermelhoVenceu==true && verdeVenceu==false && amareloVenceu==true && azulVenceu==true){
+   tresVencedores(vermelho1,azul1,amarelo1);   
+  }
+
+  if(vermelhoVenceu==false && verdeVenceu==true && amareloVenceu==true && azulVenceu==true){
+   tresVencedores(verde1,azul1,amarelo1); 
+  }
+
+  //quatro vencedores:
+
+  if(vermelhoVenceu==true && verdeVenceu==true && amareloVenceu==true && azulVenceu==true){
+   quatroVencedores();
+  }
+
+  matrizLED.clear();
+  matrizLED.show();
+
+  booleanInicial = true;
+  resetFunc();
+}
+
+void quemVenceu(){
+  for(int i=0; i<4;i++){
+    if(pontosDoVencedor < pontosDosJogadores[i]){
+      pontosDoVencedor = pontosDosJogadores[i];
+    }
+  }
+
+  if (pontosDoVencedor == pontosDosJogadores[0]){
+    Serial.println(pontosDoVencedor);
+    vermelhoVenceu = true; // Vermelho Wins
+  }
+  if (pontosDoVencedor == pontosDosJogadores[1]){
+    Serial.println(pontosDoVencedor);
+    verdeVenceu = true; // Verde Wins
+  }
+  if (pontosDoVencedor == pontosDosJogadores[2]){
+    Serial.println(pontosDoVencedor);
+    azulVenceu = true; // Azul Wins
+  }
+  if (pontosDoVencedor == pontosDosJogadores[3]){
+    Serial.println(pontosDoVencedor);
+    amareloVenceu = true; // Amarelo Wins
+  }
+
+}
+  
+void loop() {
+  iniciar();
+
+  if(comecou){
+    if(pisca)
+    {
+      for(int i = 0;i<4;i++)
+      {
+        matrizLED.setPixelColor(LEDDaVez, cor);
+        matrizLED.show();
+        if(i == 0)
+        {
+          for(int i=0;i<4;i++)
+          {
+          matrizLED.setPixelColor(i+7,arrayVermelho[sequenciaDeLeds2[i]]);
+          matrizLED.setPixelColor(7-i,arrayVermelho[sequenciaDeLeds2[i]]);
+          matrizLED.show();
+          delay(90);
+          }
+        }
+        if(i == 1)
+        {
+          for(int i=0;i<4;i++)
+          {
+          matrizLED.setPixelColor(i+22,arrayVerde[sequenciaDeLeds2[i]]);
+          matrizLED.setPixelColor(22-i,arrayVerde[sequenciaDeLeds2[i]]);
+          matrizLED.show();
+          delay(90);
+          }
+        }
+        if(i == 2)
+        {
+          for(int i=0;i<4;i++)
+          {
+          matrizLED.setPixelColor(i+37,arrayAzul[sequenciaDeLeds2[i]]);
+          matrizLED.setPixelColor(37-i,arrayAzul[sequenciaDeLeds2[i]]);
+          matrizLED.show();
+          delay(90);
+          }
+        }
+        if(i == 3)
+        {
+          for(int i=0;i<4;i++)
+          {
+          matrizLED.setPixelColor(i+52,arrayAmarelo[sequenciaDeLeds2[i]]);
+          matrizLED.setPixelColor(52-i,arrayAmarelo[sequenciaDeLeds2[i]]);
+          matrizLED.show();
+          delay(90);
+          }
+        }
+
+        matrizLED.setPixelColor(LEDDaVez, apaga);
+        matrizLED.show();
+        delay(360);
+      }
+      pisca = false;
+    }
+    timer();
+    mostraTela();
+    display.display();
+    checkVerde();
+    piscarVerde();
+    checkVermelho();
+    piscarVermelho();
+    checkAzul();
+    piscarAzul();
+    checkAmarelo();
+    piscarAmarelo();
+    giraGira();
+    speedVarLap();
+      reset();
+        if(apertadoVerde && botaoVerde.ButtonUp()){
+      apertadoVerde = false;
+    }
+        if(apertadoVermelho && botaoVermelho.ButtonUp()){
+      apertadoVermelho = false;
+    }
+        if(apertadoAzul && botaoAzul.ButtonUp()){
+      apertadoAzul = false;
+    }
+        if(apertadoAmarelo && botaoAmarelo.ButtonUp()){
+      apertadoAmarelo = false;
+    }
+
+    if (voltas < 0){
+      terminou();
+    }
+  } 
+  
+}
